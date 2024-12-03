@@ -53,7 +53,7 @@ struct RoverState {
     }
 };
 
-class StateReceiver {
+class RoverReceiver {
 private:
     std::string ip;
     uint16_t port;
@@ -67,7 +67,7 @@ private:
 
 public:
 
-    StateReceiver(std::string& _ip, uint16_t _port);
+    RoverReceiver(std::string& _ip, uint16_t _port);
     void handleMessage(std::vector<uint8_t>& packet);
     void listen();
 };

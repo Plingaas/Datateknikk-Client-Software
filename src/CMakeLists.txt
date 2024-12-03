@@ -1,5 +1,45 @@
-add_library(lib StateReceiver.cpp LidarReceiver.cpp CameraReceiver.cpp)
+set(publicHeaderDir "${CMAKE_SOURCE_DIR}/include")
+set(publicHeaders
+        "RoverReceiver.hpp"
+        "LidarReceiver.hpp"
+        "CameraReceiver.hpp"
+        "KeyboardController.hpp"
+        "AutonomousController.hpp"
+)
+
+set(publicHeadersFull)
+foreach(header IN LISTS publicHeader)
+    list(APPEND publicHeadersFull "${publicHeaderDir}/${header}")
+endforeach ()
+
+set(privateHeaders
+        "TCPStreamer.hpp"
+        "KeyListener.hpp"
+        "CSVWriter.hpp"
+        "CommandStreamer.hpp"
+        "CommandsEnum.hpp"
+        "KeysEnum.hpp"
+        "TCPConnector.hpp"
+)
+set(privateHeadersFull)
+foreach(header IN LISTS privateHeaders)
+    list(APPEND privateHeadersFull "${publicHeaderDir}/${header}")
+endforeach ()
+set(sources
+        "RoverReceiver.cpp"
+        "LidarReceiver.cpp"
+        "CameraReceiver.cpp"
+        "KeyListener.cpp"
+        "TCPStreamer.cpp"
+        "CommandStreamer.cpp"
+        "KeyboardController.cpp"
+        "AutonomousController.cpp"
+        "TCPConnector.cpp"
+)
+
+add_library(lib ${sources} ${privateHeadersFull} ${publicHeadersFull})
 target_include_directories(lib PUBLIC "${CMAKE_SOURCE_DIR}/include")
+
 include(FetchContent)
 
 set(SIMPLE_SOCKET_BUILD_TESTS_OFF)

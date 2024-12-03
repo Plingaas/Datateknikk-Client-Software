@@ -2,12 +2,12 @@
 // Created by Pling on 04/11/2024.
 //
 
-#include <StateReceiver.hpp>
+#include <RoverReceiver.hpp>
 #include <iostream>
 #include <cstring>
 #include <mutex>
 
-StateReceiver::StateReceiver(std::string &_ip, uint16_t _port) {
+RoverReceiver::RoverReceiver(std::string &_ip, uint16_t _port) {
     ip = _ip;
     port = _port;
     client = std::make_unique<TCPClientContext>();
@@ -38,9 +38,13 @@ StateReceiver::StateReceiver(std::string &_ip, uint16_t _port) {
         int dataCount = 0;
         while (true) {
            if (!packets.empty()) {
-               state = parse(packets.front().second);
-               logger->log(packets.front().first, state->getData());
-               packets.pop();
+               try {
+                state = parse(packets.front().second);
+                logger->log(packets.front().first, state->getData());
+               } catch (std::exception& e) {
+                   packets.pop();
+                   std::cout << e.what() << std::endl;
+               }
 
                if (dataCount % 10 == 0) {
                    std::cout <<  "Rover data line count: " << dataCount++ << std::endl;
@@ -53,11 +57,11 @@ StateReceiver::StateReceiver(std::string &_ip, uint16_t _port) {
     handleThread.detach();
 }
 
-void StateReceiver::handleMessage(std::vector<uint8_t>& buffer) {
+void RoverReceiver::handleMessage(std::vector<uint8_t>& buffer) {
 
 };
 
-std::shared_ptr<RoverState> StateReceiver::parse(const std::vector<uint8_t> &bytes) {
+std::shared_ptr<RoverState> RoverReceiver::parse(const std::vector<uint8_t> &bytes) {
 
     float data[13];
     for (int i = 0; i < 13; i++) {

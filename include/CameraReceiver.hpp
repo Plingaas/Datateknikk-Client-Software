@@ -12,16 +12,15 @@
 #include "simple_socket/UDPSocket.hpp"
 
 class CameraReceiver {
-
-  public:
+public:
     CameraReceiver(const std::string& ip, uint16_t port);
     std::unique_ptr<simple_socket::UDPSocket> client;
+    cv::Mat frame;
 
 private:
     std::string serverIP;
     uint16_t serverPort;
     void receive();
 
-    cv::Mat frame;
 };
 #endif //CAMERARECEIVER_HPP
