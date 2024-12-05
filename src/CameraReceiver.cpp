@@ -60,6 +60,8 @@ void CameraReceiver::receive() {
 
         try {
             auto newimg = cv::imdecode(img, cv::IMREAD_COLOR);
+
+            cv::resize(newimg, newimg, cv::Size(640, 480), cv::INTER_CUBIC);
             cv::imshow("img", newimg);
             cv::waitKey(1);
         } catch (cv::Exception e) {

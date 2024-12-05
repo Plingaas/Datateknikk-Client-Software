@@ -33,7 +33,20 @@ public:
         }
     }
 
-    void log(long long secondsSinceEpoch, const std::vector<float>& data) {
+    void log(uint64_t secondsSinceEpoch, const std::vector<float>& data) {
+        file << secondsSinceEpoch << ",";
+        for (int i = 0; i < data.size(); i++) {
+            if (i != data.size()-1) {
+                file << data[i] << ",";
+            } else {
+                file << data[i] << "\n";
+            }
+        }
+
+        file.flush();
+    }
+
+    void log(uint64_t secondsSinceEpoch, const std::vector<double>& data) {
         file << secondsSinceEpoch << ",";
         for (int i = 0; i < data.size(); i++) {
             if (i != data.size()-1) {

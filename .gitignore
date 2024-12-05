@@ -1,6 +1,7 @@
 cmake-build-debug
+cmake-build-release
 cmake-build-debug-visual-studio
-data/cloud_bin_1.pcd
-data/cloud_bin_0.pcd
+cmake-build-release-visual-studio
+data/*
 Open3D
 .idea

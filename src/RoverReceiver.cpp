@@ -10,23 +10,47 @@
 RoverReceiver::RoverReceiver(std::string &_ip, uint16_t _port) {
     ip = _ip;
     port = _port;
-    client = std::make_unique<TCPClientContext>();
-    state = std::make_shared<RoverState>();
+    client = std::make_unique<TCPConnector>(ip, port, true);
+    client->setName("Rover");
+    client->setTimeout(1000);
+    client->connect();
+
+    //client->setConnectHandler([this] {onConnect();});
+    //client->setConnectionLostHandler([this] {onConnectionLost();});
+    //client->setDisconnectHandler([this] {onDisconnect();});
+    //client->setConnectionRestoredHandler([this] {onConnectionRestored();});
+
+    state = std::make_shared<RoverFrame>();
     logger = std::make_unique<CSVWriter>("data/RoverData.csv", "time,pitch,roll,yaw,ax,ay,az,gx,gy,gz,x,y,vx,vy");
 
     receiverThread = std::thread([this, _ip, _port] {
         while (true) {
             std::cout << "Trying to connect to rover state stream." << std::endl;
-            auto connection = client->connect(_ip, _port);
+            client->connect();
             try {
                 std::cout << "Connected to server" << std::endl;
+
+                std::vector<uint8_t> SOF_ = {0xd8, 0xd9, 0xda};
+                uint8_t metaDataSize = SOF_.size() + sizeof(uint64_t);
+
                 while (true) {
-                    std::pair<long long, std::vector<uint8_t>> data;
+
+                    std::vector<uint8_t> metaDataBuffer(metaDataSize);
+                    client->read(metaDataBuffer, metaDataSize);
+                    if (!(metaDataBuffer[0] == SOF_[0] &&
+                        metaDataBuffer[1] == SOF_[1] &&
+                        metaDataBuffer[2] == SOF_[2])) {
+                        client->flush();
+                        continue;
+                    }
+
+                    uint64_t t;
+                    std::memcpy(&t, metaDataBuffer.data() + 3, sizeof(uint64_t));
                     std::vector<uint8_t> buffer(52);
-                    connection->read(buffer);
-                    auto now = std::chrono::system_clock::now();
-                    auto msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-                    packets.emplace(msSinceEpoch, buffer);
+                    client->read(buffer, 52);
+
+                    std::lock_guard<std::mutex> lock(m);
+                    packets.emplace(t, buffer);
                 }
             } catch (...) {
                 std::cerr << "Client connection error?" << std::endl;
@@ -35,19 +59,15 @@ RoverReceiver::RoverReceiver(std::string &_ip, uint16_t _port) {
     });
 
     handleThread = std::thread([this] {
-        int dataCount = 0;
         while (true) {
            if (!packets.empty()) {
                try {
-                state = parse(packets.front().second);
-                logger->log(packets.front().first, state->getData());
-               } catch (std::exception& e) {
+                   std::lock_guard<std::mutex> lock(m);
+                   state = parse(packets.front().second);
+                   logger->log(packets.front().first, state->getData());
                    packets.pop();
+               } catch (std::exception& e) {
                    std::cout << e.what() << std::endl;
-               }
-
-               if (dataCount % 10 == 0) {
-                   std::cout <<  "Rover data line count: " << dataCount++ << std::endl;
                }
            }
         }
@@ -57,16 +77,12 @@ RoverReceiver::RoverReceiver(std::string &_ip, uint16_t _port) {
     handleThread.detach();
 }
 
-void RoverReceiver::handleMessage(std::vector<uint8_t>& buffer) {
-
-};
-
-std::shared_ptr<RoverState> RoverReceiver::parse(const std::vector<uint8_t> &bytes) {
+std::shared_ptr<RoverFrame> RoverReceiver::parse(const std::vector<uint8_t> &bytes) {
 
     float data[13];
     for (int i = 0; i < 13; i++) {
         std::memcpy(&data[i], &bytes[i*sizeof(float)], sizeof(float));
     }
-    return std::make_shared<RoverState>(data);
+    return std::make_shared<RoverFrame>(data);
 };
 

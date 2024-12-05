@@ -5,6 +5,9 @@ set(publicHeaders
         "CameraReceiver.hpp"
         "KeyboardController.hpp"
         "AutonomousController.hpp"
+        "AstarSelf.hpp"
+        "FrontierMap.hpp"
+        "GridMap.hpp"
 )
 
 set(publicHeadersFull)
@@ -20,6 +23,8 @@ set(privateHeaders
         "CommandsEnum.hpp"
         "KeysEnum.hpp"
         "TCPConnector.hpp"
+        "Frontier.hpp"
+        "AStar.hpp"
 )
 set(privateHeadersFull)
 foreach(header IN LISTS privateHeaders)
@@ -35,6 +40,7 @@ set(sources
         "KeyboardController.cpp"
         "AutonomousController.cpp"
         "TCPConnector.cpp"
+        "GridMap.cpp"
 )
 
 add_library(lib ${sources} ${privateHeadersFull} ${publicHeadersFull})
@@ -50,7 +56,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(SimpleSocket)
 
-set(OpenCV_DIR $ENV{OpenCV_DIR})
+set(OpenCV_DIR "$ENV{OpenCV_DIR}/build")
 set(OpenCV)
 find_package(OpenCV CONFIG REQUIRED)
 
