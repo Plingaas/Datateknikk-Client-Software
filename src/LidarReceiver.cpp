@@ -21,7 +21,7 @@ LidarReceiver::LidarReceiver(const std::string& _ip, uint16_t _port) {
             client->connect();
             std::cout << "Connected to lidar server." << std::endl;
             std::vector<uint8_t> SOF_ = {0xd8, 0xd9, 0xda};
-            uint8_t metaDataSize = 9;
+            uint8_t metaDataSize = 10;
             uint8_t SOFSize = SOF_.size();
 
             while (true) {
@@ -40,8 +40,8 @@ LidarReceiver::LidarReceiver(const std::string& _ip, uint16_t _port) {
                 uint64_t t;
                 std::memcpy(&t, metaDataBuffer.data() + 3, sizeof(uint64_t));
 
-                int pointsInBuffer = metaDataBuffer[11];
-                size_t pointBytes = pointsInBuffer * 2 * sizeof(double);
+                uint16_t pointsInBuffer = metaDataBuffer[11] << 8 | metaDataBuffer[12];
+                size_t pointBytes = pointsInBuffer * 2 * sizeof(float);
                 std::vector<uint8_t> data(pointBytes);
                 client->read(data, pointBytes);
 
@@ -50,7 +50,7 @@ LidarReceiver::LidarReceiver(const std::string& _ip, uint16_t _port) {
 
                 if (new_frame_handler) new_frame_handler(frame);
 
-                std::vector<double> logData;
+                std::vector<float> logData;
                 for (auto pair : frame.points) {
                     logData.push_back(pair.first);
                     logData.push_back(pair.second);
@@ -68,16 +68,16 @@ LidarReceiver::LidarReceiver(const std::string& _ip, uint16_t _port) {
 
 void LidarReceiver::deserializeLidarData(LidarFrame& frame, const std::vector<unsigned char> &buffer, int points) {
 
-    size_t bytes = points * 2 * sizeof(double);
-    if (bytes % (2 * sizeof(double)) != 0) {
+    size_t bytes = points * 2 * sizeof(float);
+    if (bytes % (2 * sizeof(float)) != 0) {
         std::cerr << "Warning: Buffer size does not match expected pair structure." << std::endl;
         return; // Return an empty vector if buffer size is incorrect
     }
-    for (size_t i = 0; i < bytes; i += 2 * sizeof(double)) {
-        double first, second;
+    for (size_t i = 0; i < bytes; i += 2 * sizeof(float)) {
+        float first, second;
 
-        std::memcpy(&first, buffer.data() + i, sizeof(double)); // Extract first double
-        std::memcpy(&second, buffer.data() + i + sizeof(double), sizeof(double)); // Extract second double
+        std::memcpy(&first, buffer.data() + i, sizeof(float)); // Extract first float
+        std::memcpy(&second, buffer.data() + i + sizeof(float), sizeof(float)); // Extract second float
 
         frame.points.emplace_back(first, second); // Add pair to vector
     }

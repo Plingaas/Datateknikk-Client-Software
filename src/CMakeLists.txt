@@ -56,8 +56,8 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(SimpleSocket)
 
-set(OpenCV_DIR "$ENV{OpenCV_DIR}/build")
-set(OpenCV)
+#set(OpenCV_DIR "$ENV{OpenCV_DIR}/build")
+#set(OpenCV)
 find_package(OpenCV CONFIG REQUIRED)
 
 set(THREEPP_BUILD_TESTS OFF)

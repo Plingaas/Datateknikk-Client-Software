@@ -87,10 +87,11 @@ int main() {
 
     GridMap gridmap(gridSize, mapSize);
     gridmap.setObstacleThreshold(obstacleThreshold);
-
+    int i = 0;
     for (auto& frame : frames) {
         Frame processedFrame(frame.first, frame.second, false);
         gridmap.update(processedFrame);
+        std::cout << i++ << std::endl;
     }
 
 }

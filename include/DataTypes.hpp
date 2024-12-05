@@ -6,9 +6,10 @@
 #define DATATYPES_HPP
 #include <vector>
 #include <iostream>
+#include <opencv2/highgui.hpp>
 
 struct LidarFrame {
-    std::vector<std::pair<double, double>> points;
+    std::vector<std::pair<float, float>> points;
 };
 
 struct RoverFrame {
@@ -64,6 +65,7 @@ struct Cell {
     int obstacleCount;
     int notObstacleCount;
     int state;
+    bool seen = false;
     bool frontier = false;
 
     Cell(int x_ = 0, int y_ = 0, int obstacleCount_ = 0, int notObstacleCount_ = 0, int state_ = 0)
@@ -121,6 +123,7 @@ struct Frame {
             heading = roverFrame.yaw * 3.14159265358979323846 / 180.0f;
 
             for (auto p : lidarFrame.points) {
+                if (p.first == 0 && p.second == 0) continue; // Remove invalid points
                 LidarPoint point;
                 point.x = p.first * std::cos(heading) - p.second * std::sin(heading) + x;
                 point.y = p.first * std::sin(heading) + p.second * std::cos(heading) + y;
@@ -152,5 +155,26 @@ struct Node {
     bool operator>(const Node &other) const {
         return fCost > other.fCost;
     }
+};
+
+struct PaintWindow {
+    PaintWindow() {};
+
+    PaintWindow(const std::string& name_) : name(name_) {
+        cv::namedWindow(name);
+    };
+
+    void init(const std::string& name_) {
+        name = name_;
+        cv::namedWindow(name);
+    }
+
+    void setMouseHandler(cv::MouseCallback callback) {
+        cv::setMouseCallback(name, callback, nullptr);
+    }
+    bool isDrawing = false;
+    std::string name;
+    int lastx;
+    int lasty;
 };
 #endif //DATATYPES_HPP

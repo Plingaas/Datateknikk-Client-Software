@@ -64,6 +64,7 @@ RoverReceiver::RoverReceiver(std::string &_ip, uint16_t _port) {
                try {
                    std::lock_guard<std::mutex> lock(m);
                    state = parse(packets.front().second);
+                   if (new_frame_handler) new_frame_handler(state);
                    logger->log(packets.front().first, state->getData());
                    packets.pop();
                } catch (std::exception& e) {

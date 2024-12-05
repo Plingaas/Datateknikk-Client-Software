@@ -11,12 +11,18 @@ add_subdirectory(src)
 add_executable(main main.cpp)
 add_executable(visual visual.cpp)
 add_executable(map map.cpp)
-add_executable(BresenHam BresenHamTest.cpp)
+add_executable(BresenHam tests/BresenHamTest.cpp)
+add_executable(LidarTest tests/LidarTest.cpp)
+add_executable(RoverTest tests/RoverTest.cpp)
+add_executable(GridMapPaintTest tests/GridMapPaintTest.cpp)
 
 target_link_libraries(main PUBLIC lib)
 target_link_libraries(visual PUBLIC lib)
 target_link_libraries(map PUBLIC lib)
 target_link_libraries(BresenHam PUBLIC lib)
+target_link_libraries(LidarTest PUBLIC lib)
+target_link_libraries(RoverTest PUBLIC lib)
+target_link_libraries(GridMapPaintTest PUBLIC lib)
 
 #target_include_directories(SLAM PRIVATE "${Open3D_INCLUDE_DIR}" "${Open3D_INCLUDE_DIR}/open3d/3rdparty")
 #
@@ -28,4 +34,5 @@ target_link_libraries(BresenHam PUBLIC lib)
 
 
 file(COPY "data/" DESTINATION "${CMAKE_BINARY_DIR}/data")
+file(COPY "videos/" DESTINATION "${CMAKE_BINARY_DIR}/videos")
 #file(COPY "Open3D/bin/Open3D.dll" DESTINATION "${CMAKE_BINARY_DIR}")

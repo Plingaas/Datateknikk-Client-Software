@@ -68,7 +68,7 @@ public:
 };
 
 
-int getGridIndex(double value, int gridSize, int worldSize) {
+int getGridIndex(float value, int gridSize, int worldSize) {
     return static_cast<int>(value / (worldSize / (static_cast<float>(gridSize)) ));
 }
 
@@ -96,13 +96,13 @@ std::vector<std::pair<RoverFrame, LidarFrame>> readDataset(const std::string& fi
         std::getline(ss, headingStr, ';');
         std::getline(ss, lidarData);
 
-        double posX = std::stod(posXStr);
-        double posY = std::stod(posYStr);
-        double heading = std::stod(headingStr);
+        float posX = std::stod(posXStr);
+        float posY = std::stod(posYStr);
+        float heading = std::stod(headingStr);
 
         // Apply transformation for the position
-        double _posX = posY;
-        double _posY = -posX;
+        float _posX = posY;
+        float _posY = -posX;
 
         RoverFrame roverFrame;
         roverFrame.yaw = heading;
@@ -118,12 +118,12 @@ std::vector<std::pair<RoverFrame, LidarFrame>> readDataset(const std::string& fi
         std::string point;
         while (std::getline(lidarStream, point, ':')) {
             std::stringstream pointStream(point);
-            double x, y;
+            float x, y;
             char comma; // To read the comma between x and y
 
             if (pointStream >> x >> comma >> y) {
-                double _x = x * std::cos(heading) - y * std::sin(heading) + _posX;
-                double _y = x * std::sin(heading) + y * std::cos(heading) + _posY;
+                float _x = x * std::cos(heading) - y * std::sin(heading) + _posX;
+                float _y = x * std::sin(heading) + y * std::cos(heading) + _posY;
                 // Default confidence value set to 0
                 lidarFrame.points.push_back({_x, _y});
             } else {
@@ -142,12 +142,12 @@ std::vector<std::pair<RoverFrame, LidarFrame>> readDataset(const std::string& fi
 
 
 
-int main() {
+int main(int argc, char** argv) {
     // Create a 500x500 black image
 
-    int gridSize = 300;
-    int mapSize = 30;
-    int obstacleThreshold = 7;
+    int mapSize = 50; // In meters
+    int gridSize = mapSize * 10; // Resolution per grid in meters is (mapSize / gridSize)
+    int obstacleThreshold = 28; // Points per grid to become obstacle
 
     std::string hotspotIP("10.42.0.1");
     std::string eduroamIP("10.24.85.223");
@@ -157,12 +157,22 @@ int main() {
     uint16_t roverPort = 9996;
     uint16_t lidarPort = 9998;
 
+    if (argc > 1) roverPort = std::stoi(argv[1]);
+    if (argc > 2) lidarPort = std::stoi(argv[2]);
+    if (argc > 3) cameraPort = std::stoi(argv[3]);
+
     // Receive data
     CameraReceiver cameraReceiver(ip, cameraPort);
+    std::string videoFilename = "Dashcam.avi";
+    cameraReceiver.record(videoFilename, 30);
+
     RoverReceiver rover(ip, roverPort);
     LidarReceiver lidar(ip, lidarPort);
 
+
     GridMap map(gridSize, mapSize);
+    std::string mapVideoFilename = "MapGeneration.avi";
+    map.screenRecord(mapVideoFilename, 10);
     map.setObstacleThreshold(obstacleThreshold);
 
     Frame frame;
@@ -178,7 +188,6 @@ int main() {
         newFrame = true;
     });
 
-
     std::queue<float> targetQueue;
     map.setNewPathHandler([&m, &targetQueue](Cell& current, Cell& target) {
 
@@ -189,7 +198,6 @@ int main() {
         if (wantedHeading < 0) {
             wantedHeading += 360;
         }
-        std::cout << wantedHeading << std::endl;
         std::lock_guard<std::mutex> lockMain(m);
         targetQueue.push(wantedHeading);
     });
@@ -212,74 +220,6 @@ int main() {
             targetQueue.pop();
         }
     }
-
-    /*threepp::Canvas canvas("KeyInput");
-    canvas.setSize({100, 100});
-    threepp::GLRenderer renderer(canvas.size());
-    auto camera = threepp::PerspectiveCamera::create();
-    auto scene = threepp::Scene::create();
-
-    uint16_t commandPort = 5853;
-    simple_socket::TCPServer commandServer(commandPort);
-    auto commandConnection = commandServer.accept();
-
-    threepp::Object3D keyObject;
-    scene->add(keyObject);
-    KeyController keyListener(keyObject, std::move(commandConnection));
-    canvas.addKeyListener(keyListener);
-
-    int index = 0;
-    int driveIndex = 0;
-    int turnIndex = 0;
-    canvas.animate([&] {
-
-        if (keyListener.leftPressed) {
-            if (turnIndex == 20) {
-                keyListener.bytesToSend.push_back(0x02);
-                keyListener.connection->write(keyListener.bytesToSend);
-                keyListener.bytesToSend.clear();
-                turnIndex = 0;
-            } else {
-                turnIndex++;
-            }
-        }
-        if (keyListener.rightPressed) {
-            if (turnIndex == 20) {
-                keyListener.bytesToSend.push_back(0x03);
-                keyListener.connection->write(keyListener.bytesToSend);
-                keyListener.bytesToSend.clear();
-                turnIndex = 0;
-            } else {
-                turnIndex++;
-            }
-        }
-        if (keyListener.upPressed) {
-            if (driveIndex == 20) {
-                keyListener.bytesToSend.push_back(0x01);
-                keyListener.connection->write(keyListener.bytesToSend);
-                keyListener.bytesToSend.clear();
-                driveIndex = 0;
-            } else {
-                driveIndex++;
-            }
-        }
-        if (keyListener.downPressed) {
-            if (driveIndex == 20) {
-                keyListener.bytesToSend.push_back(0x04);
-                keyListener.connection->write(keyListener.bytesToSend);
-                keyListener.bytesToSend.clear();
-                driveIndex = 0;
-            } else {
-               driveIndex++;
-            }
-        }
-
-        renderer.render(*scene, *camera);
-        if (newFrame) {
-            map.update(frame);
-            newFrame = false;
-        }
-     });*/
     return 0;
 }
 

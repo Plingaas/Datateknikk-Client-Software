@@ -6,16 +6,6 @@
 #include <iomanip>
 
 #define BUFFER_SIZE 1024
-// Function to print the first i elements of a buffer in hex
-void printBuffer(const std::vector<uint8_t>& buffer, size_t i) {
-    // Print up to i elements, in hex format
-    for (size_t idx = 0; idx < i && idx < buffer.size(); ++idx) {
-        // Print each byte in hex, ensuring two digits per byte (with leading zeroes if necessary)
-        std::cout << "0x" << std::setw(2) << std::setfill('0') << std::hex << (int)buffer[idx] << " ";
-    }
-    std::cout << std::endl;
-}
-
 
 CameraReceiver::CameraReceiver(const std::string& ip, uint16_t port) {
 #ifdef HAS_CUDA
@@ -26,6 +16,9 @@ CameraReceiver::CameraReceiver(const std::string& ip, uint16_t port) {
 
     serverIP = ip;
     serverPort = port;
+    frameSize = cv::Size(416, 416);
+    recording = false;
+
     std::thread receiver_thread([this] {
         client = std::make_unique<simple_socket::UDPSocket>(8553);
         receive();
@@ -61,8 +54,9 @@ void CameraReceiver::receive() {
         try {
             auto newimg = cv::imdecode(img, cv::IMREAD_COLOR);
 
-            cv::resize(newimg, newimg, cv::Size(640, 480), cv::INTER_CUBIC);
+            cv::resize(newimg, newimg, frameSize, cv::INTER_CUBIC);
             cv::imshow("img", newimg);
+            if (recording) writer->write(newimg);
             cv::waitKey(1);
         } catch (cv::Exception e) {
             std::cout << e.what() << std::endl;
@@ -70,3 +64,13 @@ void CameraReceiver::receive() {
     }
 }
 
+void CameraReceiver::record(std::string& filename, int fps) {
+    writer = std::make_unique<cv::VideoWriter>(
+        "videos/" + filename,
+        cv::VideoWriter::fourcc('M', 'J', 'P', 'G'),
+        fps,
+        frameSize
+    );
+
+    recording = writer->isOpened();
+}

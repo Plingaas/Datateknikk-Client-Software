@@ -16,7 +16,17 @@
 #include "DataTypes.hpp"
 
 class RoverReceiver {
+
+public:
+    using NewFrameHandler = std::function<void(std::shared_ptr<RoverFrame>)>;
+    void setOnNewFrameHandler(NewFrameHandler handler) {new_frame_handler = std::move(handler);};
+
+    std::mutex m;
+    RoverReceiver(std::string& _ip, uint16_t _port);
+
+    [[nodiscard]] RoverFrame getFrame() const {return *state;}
 private:
+    NewFrameHandler new_frame_handler;
     std::string ip;
     uint16_t port;
     std::queue<std::pair<long long, std::vector<uint8_t>>> packets;
@@ -26,12 +36,5 @@ private:
     std::unique_ptr<CSVWriter> logger;
     std::shared_ptr<RoverFrame> state;
     std::shared_ptr<RoverFrame> parse(const std::vector<uint8_t> &bytes);
-
-public:
-    std::mutex m;
-    RoverReceiver(std::string& _ip, uint16_t _port);
-
-    [[nodiscard]] RoverFrame getFrame() const {return *state;}
-
 };
 #endif //STATERECEIVER_HPP
