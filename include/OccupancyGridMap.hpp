@@ -9,27 +9,27 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui.hpp>
 #include "DataTypes.hpp"
+#include "AStar.hpp"
 
-class GridMap {
+class OccupancyGridMap {
 
 public:
 
     using NewPathHandler = std::function<void(Cell& current, Cell& target)>;
     void setNewPathHandler (NewPathHandler handler) {newPathHandler = std::move(handler);};
-    GridMap(int size_, int worldSize_);
+    OccupancyGridMap(int size_, int worldSize_);
     void setObstacleThreshold(const int obstacleThreshold_) {obstacleThreshold = obstacleThreshold_;};
     void update(Frame& frame);
     void screenRecord(std::string& filename, int fps);
     void setFrame();
     void displayFrame();
-    ~GridMap() {
+    ~OccupancyGridMap() {
         if (recording) writer->release();
     }
-
-    std::vector<Cell> AStar(const Cell &start, const Cell &goal);
 private:
-
     NewPathHandler newPathHandler;
+    AStar pathfinder;
+
     void setPixelToObstacle(int x, int y);
     void markLidarPoints(Frame& frame);
     uint32_t getGridIndex(float value);
@@ -43,7 +43,7 @@ private:
     bool isValidPosition(Cell& cell);
     bool isValidPosition(int x, int y);
     Cell centerFrontier;
-    std::vector<Cell> path;
+    Path path;
     PaintWindow window;
     int obstacleThreshold;
     int gridSize;

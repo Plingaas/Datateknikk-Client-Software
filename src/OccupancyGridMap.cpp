@@ -61,7 +61,7 @@ void GridMap::markLidarPoints(Frame& frame) {
                 map[y][x].state = 2;
                 int roverX = getGridIndex(frame.x);
                 int roverY = getGridIndex(frame.y);
-                auto cells = bresenham(roverX, roverY, x, y, 5);
+                auto cells = bresenham(roverX, roverY, x, y, 2);
 
                 for (auto cell : cells) {
                     // Logikk for å se ratio mellom occupied og unoccupied
@@ -80,21 +80,16 @@ void GridMap::setFrame() {
         for (int x = 0; x < gridSize; x++) {
             if (map[y][x].state == 0) {
                 mapGraphics.at<cv::Vec3b>(_y, x) = cv::Vec3b(128, 128, 128);
-                //mapGraphics.at<uint8_t>(y, x) = 0;
             } else if (map[y][x].state == 1) {
                 if (map[y][x].frontier) mapGraphics.at<cv::Vec3b>(_y, x) = cv::Vec3b(0, 0, 255);
                 else mapGraphics.at<cv::Vec3b>(_y, x) = cv::Vec3b(255, 255, 255);
-                //mapGraphics.at<uint8_t>(y, x) = 0;
             } else if (map[y][x].state == 2) {
                 mapGraphics.at<cv::Vec3b>(_y, x) = cv::Vec3b(0, 0, 0);
-                //mapGraphics.at<uint8_t>(y, x) = 0;
             }
-
-            //mapGraphics.at<uint8_t>(y, x) = 255;
         }
     }
 
-    if (path.empty()) return;
+    if (!path) return;
     for (auto &cell : path) {
         if (isValidPosition(cell)) mapGraphics.at<cv::Vec3b>(gridSize-1-cell.y, cell.x) = cv::Vec3b(0, 255, 0);
     }
@@ -106,8 +101,8 @@ void GridMap::update(Frame& frame) {
     if (framesSinceFrontier > 5) {
         clearFrontiers();
         //markFrontiers(frame);
-        int roverX = getGridIndex(frame.x);
-        int roverY = getGridIndex(frame.y);
+        uint32_t roverX = getGridIndex(frame.x);
+        uint32_t roverY = getGridIndex(frame.y);
 
         auto centers = findLargestFrontierCenters();
         if (!centers.empty()) {
@@ -131,7 +126,7 @@ void GridMap::update(Frame& frame) {
 
 
         int seeforward = 7; // How many tiles to see forward for driving the rover.
-        if (!path.empty()) {
+        if (path) {
             auto index = std::min(static_cast<int>(path.size()-1), seeforward);
             if (newPathHandler) newPathHandler(roverPos, path[index]);
         } else {
@@ -430,104 +425,6 @@ void GridMap::clearFrontiers() {
              cell.frontier = false;
          }
      }
-}
-
-std::vector<Cell> GridMap::AStar(const Cell &start, const Cell &goal) {
-
-    auto heuristic = [](const Cell &a, const Cell &b) {
-        return std::abs(a.y - b.y) + std::abs(a.x - b.x);
-    };
-
-    auto calculateWallPenalty = [this](const Cell &pos) {
-        double penalty = 0.0;
-        for(int i=0; i < 5; ++i) {
-            Cell W(-i, 0);
-            Cell NW(-i, i);
-            Cell N (0, i);
-            Cell NE(i, i);
-            Cell E(i, 0);
-            Cell SE(i, -i);
-            Cell S(0, -i);
-            Cell SW(-i, -i);
-
-            const std::vector<Cell> directions = {
-                N, NE, E, SE, S, SW, W, NW
-            };
-
-            for (const auto &cell : directions) {
-                int y = pos.y + cell.y;
-                int x = pos.x + cell.x;
-                Cell tile(x, y);
-                if (isValidPosition(tile) && (map[y][x].state != 1 || map[y][x].frontier)) {
-                    penalty += 10; // Add a penalty for proximity to walls
-                }
-            }
-        }
-
-        return penalty;
-    };
-
-    using NodeQueue = std::priority_queue<Node, std::vector<Node>, std::greater<Node>>;
-    NodeQueue openSet;
-
-    std::set<Cell> closedSet;
-    std::map<Cell, Cell> cameFrom;
-    std::map<Cell, double> gCost;
-
-    gCost[start] = 0;
-    openSet.emplace(start, 0, heuristic(start, goal)); // Use constructor here
-
-    Cell W(-1, 0);
-    Cell NW(-1, 1);
-    Cell N (0, 1);
-    Cell NE(1, 1);
-    Cell E(1, 0);
-    Cell SE(1, -1);
-    Cell S(0, -1);
-    Cell SW(-1, -1);
-
-    const std::vector<Cell> directions = {
-        N, NE, E, SE, S, SW, W, NW
-    };
-    while (!openSet.empty()) {
-        Node current = openSet.top();
-        openSet.pop();
-
-        // Check if we reached a cell marked with 0
-        if (current.pos == goal) {
-            // Reconstruct the path
-            std::vector<Cell> path;
-            for (Cell p = goal; p != start; p = cameFrom[p]) {
-                path.push_back(p);
-            }
-            path.push_back(start);
-            std::reverse(path.begin(), path.end());
-            return path;
-        }
-
-        closedSet.insert(current.pos);
-
-        for (const auto &cell : directions) {
-            Cell neighbor = {current.pos.x + cell.x, current.pos.y + cell.y};
-            if (!isValidPosition(neighbor) || map[neighbor.y][neighbor.x].state != 1 || closedSet.count(neighbor)) {
-                continue; // Skip invalid, unknown or obstacle cells
-            }
-
-            double wallPenalty = calculateWallPenalty(neighbor);
-
-            double tentativeGCost = gCost[current.pos] + 1 + wallPenalty; // Include wall penalty
-
-            if (!gCost.count(neighbor) || tentativeGCost < gCost[neighbor]) {
-                cameFrom[neighbor] = current.pos;
-                gCost[neighbor] = tentativeGCost;
-                double fCost = tentativeGCost + heuristic(neighbor, goal);
-
-                openSet.emplace(neighbor, tentativeGCost, fCost); // Use constructor here
-            }
-        }
-    }
-
-    return {}; // Return an empty path if no path is found
 }
 
 void GridMap::saveGridToFile(const std::vector<std::vector<Cell>>& grid, const std::string& filename) {
